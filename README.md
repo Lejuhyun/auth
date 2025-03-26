@@ -1,4 +1,4 @@
-## 1. 장고설치 및 프로젝트 시작 ##
+## 1. 장고설치 및 프로젝트 시작 
 ```shell
 python -m venv venv
 source venv/script/activate
@@ -7,15 +7,15 @@ git init
 django-admin startproject auth . 
 django-admin startapp accounts
 ```
-## 2. 앱 등록(settings.py) ##
+## 2. 앱 등록(settings.py) 
 installed_apps에 'accounts' 추가하기
 
-## 3. 베이스 html 등록(settings.py) ##
+## 3. 베이스 html 등록(settings.py) 
 - templates에 'DIRS': [BASE_DIR/'templates'] 쓰기
 - 최상단에 templates 폴더 만들기
 - templates 폴더에 base.html 파일 생성
 
-## 4. base.html ##
+## 4. base.html 
 - head 끝나기 전에 bootstrap 삽입 (include via cdn)
 - body 끝나기 전에 bootstrap 삽입 
 - body에 블럭 넣기
@@ -27,7 +27,7 @@ installed_apps에 'accounts' 추가하기
 ```
 - {% block body %}: Django 템플릿에서 블록(block) 을 정의하는 부분. 자식 템플릿에서 덮어쓰기(override)할 수 있는 영역을 의미.
 
-## 5. model 생성(accounts) ##
+## 5. model 생성(accounts) 
 ```python
 from django.contrib.auth.models import AbstractUser
 class User(AbstractUser): # AbstractUser를 상속받음
@@ -36,21 +36,21 @@ class User(AbstractUser): # AbstractUser를 상속받음
 - AbstractUser는 Django에서 기본 제공하는 User 모델(username, email, password 같은 필드 포함)
 - class User(AbstractUser)는 기본 User 모델을 상속해서 새로운 User 모델을 만드는 것.
 
-## 6. 장고가 만든 user 모델과 내가 만든 user 모델의 충돌 방지하기(settings.py) ##
+## 6. 장고가 만든 user 모델과 내가 만든 user 모델의 충돌 방지하기(settings.py) 
 ```python
 AUTH_USER_MODEL = 'accounts.User' # account라는 앱에 User라는 클래스 사용할거야.
 ```
-## 7. migration 파일 생성하기 ##
+## 7. migration 파일 생성하기 
 ```shell
 python manage.py makemigrations
 python manage.py migrate
 ```
-## 8. url 설정하기 ##
+## 8. url 설정하기 
 - auth -> urls.py 
 ```python
 python('accounts/', include('accounts.url'))
 ```
-## 8-1. accounts 앱 하위에 urls.py 생성 ##
+### 8-1. accounts 앱 하위에 urls.py 생성 
 ```python
 from django.urls import path
 from . import views
@@ -62,7 +62,7 @@ urlpatterns = [
 ]
 ```
 
-## 9. signup 함수 생성 (views.py) ##
+## 9. signup 함수 생성 (views.py) 
 - accounts 앱 하위에 forms.py 생성하기
 
 ```python
@@ -103,7 +103,7 @@ def signup(request):
 
     return render(request, 'signup.html', context) # signup.html에서 폼을 출력한다
 ```
-## 10. account 앱 하위에 templates 폴더 생성 => signup.html 생성 ##
+## 10. account 앱 하위에 templates 폴더 생성 => signup.html 생성 
 ```html
 {% extends 'base.html' %}
 {% block body %}
@@ -115,30 +115,33 @@ def signup(request):
 {% endblock %}
 ```
 
-## login 기능 설정 ##
+# login 기능 설정 
 - url 설정 => 함수생성
-## 1. path 설정(urls.py) ##
+## 1. path 설정(urls.py) 
 ```python
 path('login/', views.login, name='login'),
 ```
-## 2. 로그인 함수 생성 (views.py) ##
+## 2. 로그인 함수 생성 (views.py) 
 ```python
 def login(request):
     pass
 ```
-## 3. GET 요청이 들어왔을 때 보여줄 폼 생성(forms.py)##
+## 3. GET 요청이 들어왔을 때 보여줄 폼 생성(forms.py)
 ```python
 from django.contrib.auth.forms import AuthenticationForm
 
 class CustomAuthenticationForm(AuthenticationForm):
     pass
 ```
-## 4. 로그인함수에서 폼 받아오기(views.py)##
+## 4. 로그인함수에서 폼 받아오기(views.py)
 ```python
 from .forms import  CustomAuthenticationForm
 def login(request):
     if request.method == 'POST':
-        pass
+        form = CustomAuthenticationForm(request, request.POST)
+        if form.is_valid():
+            auth_login(request, form.get_user())
+            return redirect('accounts:login')
     else:
         form = CustomAuthenticationForm()
     
@@ -159,6 +162,72 @@ def login(request):
     </form>
 {% endblock %}
 ```
+
+# logout 기능설정 
+## 1. path 설정 (urls.py) 
+```python
+path('logout/', view.logout, name='logout')
+```
+## 2. logout 함수 생성 (views.py)
+```python
+from django.contrib.auth import logout as auth_logout
+```
+
+
+## base.html 수정
+```html
+    <nav class="nav">
+        {% if user.is_authenticated %}
+            <a href="" class = "nav-link disabled">{{user}}</a>
+            <a href="{% url 'accounts:logout' %}" class = 'nav-link'>logout</a>
+        {% else %}
+        <a href="{% url 'accounts:signup' %}" class = "nav-link">signup</a>
+        <a href="{% url 'accounts:login' %}" class= 'nav-link'>login</a>
+        {% endif %}
+    </nav>
+```
+# 새로운 앱 생성 
+## 1. 시작
+```shell
+django-admin startapp articles
+```
+- auth => settings.py => 앱 등록하기
+
+## 2. model 생성 (models.py)
+```python
+from django.db import models
+from accounts.models import User
+from django.conf import settings
+from django.contrib.auth import get_user_model
+# Create your models here.
+class Article(models.Model):
+    title = models.CharField(max_length=100)
+    content = models.TextField()
+
+    # 1. 직접참조 
+    # user = models.ForeignKey(User, on_delete = models.CASCADE)
+    # 2. settings.py 변수 활용
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete = models.CASCADE)
+    # 3. get_user_model
+    # user = models.ForeignKey(get_user_model(),on_delete = models.CASCADE)
+```
+### 2-1. 참조하기
+```shell
+python manage.py makemigrations
+python manage.py migarte
+```
+
+
+
+
+
+
+
+
+
+
+
+
 - model, form , 함수 차이
     - model: 데이터 저장 및 관리
         - ex) class User(): User라는 테이블이 DB에 생성된다
