@@ -2,4 +2,10 @@
 
 {% block body %}
     <h1>index</h1>
+    {% for article in articles %}
+        <h3>{{article.title}}</h3>
+        <p>{{article.content}}</p>
+        <p>{{article.user}}</p>
+        <hr>
+    {% endfor %}
 {% endblock %}

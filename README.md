@@ -235,7 +235,11 @@ urlpatterns = [
 ## 1. index 함수 생성 (views.py)
 ```python
 def index(request):
-    return render(request, 'index.html')
+    articles = Article.objects.all()
+    context = {
+        'articles': articles,
+    }
+    return render(request, 'index.html', context)
 ```
 ## 2. articles 하위에 templates 파일 생성 (=> index.html 생성)
 ```html
@@ -243,6 +247,12 @@ def index(request):
 
 {% block body %}
     <h1>index</h1>
+    {% for article in articles %}
+        <h3>{{article.title}}</h3>
+        <p>{{article.content}}</p>
+        <p>{{article.user}}</p>
+        <hr>
+    {% endfor %}
 {% endblock %}
 ```
 # create 기능 구현
