@@ -216,31 +216,109 @@ class Article(models.Model):
 python manage.py makemigrations
 python manage.py migarte
 ```
+## 3. url 생성하기
+- project 파일(auth)에 url 생성
+```python
+path('articles/', include('articles.urls')),
+```
+
+- article 파일 하단에 urls.py 생성
+```python
+from django.urls import path
+from  . import views
+app_name = 'articles'
+urlpatterns = [
+    path('', views.index, name='index'),
+]
+```
+# index 기능 구현
+## 1. index 함수 생성 (views.py)
+```python
+def index(request):
+    return render(request, 'index.html')
+```
+## 2. articles 하위에 templates 파일 생성 (=> index.html 생성)
+```html
+{% extends 'base.html' %}
+
+{% block body %}
+    <h1>index</h1>
+{% endblock %}
+```
+# create 기능 구현
+
+## 1. base.html 에 추가하기
+```html
+<a href="{% url 'articles:create' %}" class = 'nav-link'>create</a>
+```
+
+## 2. url 생성하기 (articles => urls.py)
+```python
+path('create/', views.create, name='create'),
+```
+
+## 3. create 함수 생성하기 (articles => views.py)
+
+### 3-1. form 생성하기 (articles => forms.py)
+```python
+from django.forms import ModelForm
+from . models import Article
+
+class ArticleForm(ModelForm):
+    class Meta():
+        model= Article
+        exclude = ('user',)
+```
+### 3-2. form 받아와서 create 함수 생성하기 (articles => views.py)
+```python
+from .forms import ArticleForm
+def create(request):
+    if request.method == 'POST':
+        form = ArticleForm(request.POST)
+        if form.is_valid(): 
+            article = form.save(commit=False) #게시물에 유저 정보가 없으므로 임시 저장해준다
+            article.user = request.user # request 에서 user 정보를 article.user에 저장한다
+            article.save() # 최종적으로 저장해준다
+            return redirect('articles:index')
+    else:
+        form = ArticleForm()
+    context = {
+        'form': form,
+    }
+    return render(request, 'create.html', context)
+```
+
+## 4. html 생성하기 (articles 하위에 templates 폴더 생성 => create.html 생성)
+```html
+{% extends 'base.html' %}
+
+{% block body %}
+    <form action="" method = "POST">
+        {% csrf_token %}
+        {{form}}
+        <input type="submit">
+    </form>
+{% endblock %}
+```
 
 
 
 
 
-
-
-
-
-
-
-
-- model, form , 함수 차이
-    - model: 데이터 저장 및 관리
+# model, form , 함수 차이
+- model: 데이터 저장 및 관리
         - ex) class User(): User라는 테이블이 DB에 생성된다
         - 데이터를 추가/조회/삭제할때 사용한다
-    - form: 사용자 입력을 처리 
+- form: 사용자 입력을 처리 
         - ex) class UserForm(): 폼을 자동으로 생성해준다
         - 입력값이 올바른지 검증해준다
-    - function: 특정 작업을 수행
+- function: 특정 작업을 수행
         - ex) 회원가입을 처리하는 함수
         - POST: 폼 데이터를 받아서 저장
         - GET: 빈 폼을 보여줌
 
-- render(request, '템플릿파일.html', context)
-    - 템플릿과 데이터를 결합하여 웹 페이지를 사용자에게 제공.
-    - context는 템플릿에 전달할 데이터를 담고 있는 딕셔너리 객체
-    - 템플릿에서 {{ variable_name }}과 같은 방식으로 데이터를 출력
+# render(request, '템플릿파일.html', context)
+- 템플릿과 데이터를 결합하여 웹 페이지를 사용자에게 제공.
+- context는 템플릿에 전달할 데이터를 담고 있는 딕셔너리 객체
+- 템플릿에서 {{ variable_name }}과 같은 방식으로 데이터를 출력
+
