@@ -332,3 +332,176 @@ def create(request):
 - context는 템플릿에 전달할 데이터를 담고 있는 딕셔너리 객체
 - 템플릿에서 {{ variable_name }}과 같은 방식으로 데이터를 출력
 
+
+# 댓글 기능 생성
+
+## 1. 모델 구현하기 (models.py)
+```python
+class Comment(models.Model):
+    content = models.TextField()
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    article = models.ForeignKey(Article, on_delete=models.CASCADE)
+```
+- migration 작업
+```shell
+python manage.py makemigrations
+python manage.py migrate
+```
+## 2. url 만들기
+- index.html
+```html
+<a href="{% url 'articles:deatil' article.id %}">detail</a>
+```
+- (articles => urls.py)
+```python
+path('<int:id>/', views.detail, name = 'detail')
+```
+
+## 3. views 만들기
+```python
+def detail(request,id):
+    article = Article.objects.get(id=id)
+    context = {
+        'article':article,
+    }
+    return render(request, 'detail.html', context)
+```
+
+## 4. html 만들기
+```html
+{% extends 'base.html' %}
+
+{% block body %}
+    <h1>{{article.title}}</h1>
+    <p>{{article.content}}</p>
+    <p>{{article.user}}</p>
+
+{% endblock %}
+```
+
+## 5. comment form 만들기
+- forms.py
+```python
+class CommentForm(ModelForm):
+    class Meta():
+        model= Comment
+        fields = ('content', )
+```
+- views.py
+```python
+from .forms import ArticleForm, CommentForm
+def detail(request,id):
+    article = Article.objects.get(id=id)
+    form = CommentForm()
+    context = {
+        'article':article,
+        'form': form, # comment를 변수형태로 저장해서 article에 보냄
+    }
+    return render(request, 'detail.html', context)
+```
+
+## 6. detail.html 수정하기
+```html
+    <form action="{% url 'articles: comment_create' article.id }" method = "POST">
+        {% csrf_token %}
+        {{form}}
+        <input type="submit">
+    </form>
+```
+- action을 해야하는 이유: 
+
+## 7. urls.py
+```python
+path('<int:article_id>/comments/create/', views.comment_create, name = 'comment_create'),
+```
+
+## 8. comment_create 함수 생성(views.py)
+```python
+@login_required
+def comment_create(request, article_id):
+    form = CommentForm(request.POST)
+    if form.is_valid():
+        comment = form.save(commit = False)
+
+        # 객체를 저장하는 경우
+        # comment.user = request.user # 현재 로그인한 사람에 대한 정보
+        # article = Article.objects.get(id=article_id)
+        # comment.article = article
+
+        # id 값을 저장하는 경우
+        comment.user_id = request.user.id
+        comment.article_id= article_id
+        comment.save()
+        return redirect('articles:detail', id=article_id)
+```
+
+## 9. 댓글 출력 (detail.html)
+```html
+    <hr>
+    {% for comment in article.comment_set.all %}
+        <li>{{comment.user.username}}-{{comment.content}}</li>
+    {% endfor %}
+```
+
+# 댓글 삭제 기능 구현
+
+## 1. delete 버튼 생성 (detail.html)
+```html
+<a href="{% url 'articles:commetn_delete' article.id comment.id %}">delete</a>
+```
+
+## 2. 경로 설정 (urls.py)
+```python
+path('<int:article_id>/comments/<int:comment_id>/delete/', views.comment_delete, name = 'comment_delete')
+```
+
+## 3. 함수 생성(views.py)
+
+```python
+from .models import Article, Comment
+def comment_delete(request, article_id, comment_id):
+    comment = Comment.objects.get(id = comment_id)
+    comment.delete()
+    return redirect('articles:detail', id = article_id)
+```
+
+## 4. 자기 댓글만 삭제할 수 있게(detail.html)
+- 자기 댓글에만 delete버튼 보이게
+```html
+        {% if user == comment.user %}
+            <a href="{% url 'articles:comment_delete' article.id comment.id %}">delete</a>
+        {% endif %}
+```
+- 자기 댓글만 삭제할수 있도록 함수 구현(views.py)
+```python
+@login_required
+def comment_delete(request, article_id, comment_id):
+    comment = Comment.objects.get(id = comment_id)
+    if request.user == comment.user:
+        comment.delete()
+        
+    return redirect('articles:detail', id = article_id)
+```
+
+# 게시물 삭제 
+## 1. 버튼 생성 (detail.html)
+```html
+    {% if user == article.user %} 
+    <a href="">update</a>
+    <a href="{%url 'articles:delete' article.id %}">delete</a>
+```
+
+## 2. 경로생성 (urls.py)
+```python
+ path('<int:article_id>/delete/', views.delete, name = 'delete')
+```
+
+## 3. 함수생성 (views.py)
+```python
+@login_required
+def delete(request,id):
+    article = Article.objects.get(id=id)
+    if request.user == article.user:
+        article.delete()
+    return redirect('articles:index')
+```

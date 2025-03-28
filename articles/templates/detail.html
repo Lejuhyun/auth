@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block body %}
+    <h1>{{article.title}}</h1>
+    <p>{{article.content}}</p>
+    <p>{{article.user}}</p>
+
+    {% if user == article.user %} 
+    <a href="{% url 'articles:update' article.id %}">update</a>
+    <a href="{%url 'articles:delete' article.id %}">delete</a>
+    {% endif %}
+
+
+    <hr>
+    <form action="{% url 'articles:comment_create' article.id %}" method = "POST">
+        {% csrf_token %}
+        {{form}}
+        <input type="submit">
+
+    </form>
+
+    <hr>
+    {% for comment in article.comment_set.all %}
+        <li>{{comment.user.username}}-{{comment.content}}</li>
+        {% if user == comment.user %}
+            <a href="{% url 'articles:comment_delete' article.id comment.id %}">delete</a>
+        {% endif %}
+    {% endfor %}
+{% endblock %}
+
